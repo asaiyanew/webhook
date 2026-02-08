@@ -1,0 +1,656 @@
+-- Dual Webhook Hatch Monitor (Server & Global Separate)
+local TextChatService = game:GetService("TextChatService")
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+
+-- Configuration
+local SERVER_WEBHOOK = "https://discord.com/api/webhooks/1467126736516026464/_iBjbNFlzvekDjqPlKeI5u_LH_ywr--xkeNjAANxTTSUNFKn_fAWLduPcLxfrv0ClKal"
+local GLOBAL_WEBHOOK = "https://discord.com/api/webhooks/1467126880510541825/W9K05DiKy_vw2VWlHosfwHoWvDfc7C4mz_fL5XQavcoeaqmDYaGNsclKyTmjXYMuYfgw"
+
+-- Users that should ping @everyone in Global
+local GLOBAL_PING_USERS = {
+    "Raiden_Zel",
+    "WORST_HACHIMI", 
+    "1LOVEYOURAIDEN_ei",
+    "2LOVEYOURAIDEN_ei",
+    "WORST_3",
+    "4ILoveYouRaiden_ei",
+    "5ILoveYouRaiden_ei",
+    "6ILoveYouRaiden_ei",
+    "7IloveYouRaiden_ei",
+    "8IloveYouRaiden_ei",
+    "9IloveYouRaiden_ei",
+    "Zelucifer"
+}
+
+-- Target user information for verification
+local TARGET_USER = {
+    Username = "Milocji2a",
+    Nickname = "WORST_3",
+    UserId = 5357478860
+}
+
+-- Function to verify user
+local function verifyUser()
+    local player = Players.LocalPlayer
+    if not player then return false end
+    
+    -- Check all three conditions
+    if player.Name ~= TARGET_USER.Username then
+        print("❌ Username mismatch. Expected:", TARGET_USER.Username, "Got:", player.Name)
+        return false
+    end
+    
+    if player.DisplayName ~= TARGET_USER.Nickname then
+        print("❌ Nickname mismatch. Expected:", TARGET_USER.Nickname, "Got:", player.DisplayName)
+        return false
+    end
+    
+    if player.UserId ~= TARGET_USER.UserId then
+        print("❌ UserId mismatch. Expected:", TARGET_USER.UserId, "Got:", player.UserId)
+        return false
+    end
+    
+    return true
+end
+
+-- Function to show unauthorized message
+local function showUnauthorizedMessage()
+    local player = Players.LocalPlayer
+    local playerGui = player:WaitForChild("PlayerGui")
+    
+    -- Create ScreenGui
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "UnauthorizedMessage"
+    screenGui.Parent = playerGui
+    
+    -- Create main frame
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.new(0.4, 0, 0.25, 0)
+    mainFrame.Position = UDim2.new(0.3, 0, 0.375, 0)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    mainFrame.BorderColor3 = Color3.fromRGB(255, 50, 50)
+    mainFrame.BorderSizePixel = 3
+    mainFrame.BackgroundTransparency = 0.1
+    mainFrame.Parent = screenGui
+    
+    -- Add corner rounding
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0.05, 0)
+    corner.Parent = mainFrame
+    
+    -- Add shadow
+    local shadow = Instance.new("UIStroke")
+    shadow.Color = Color3.fromRGB(255, 50, 50)
+    shadow.Thickness = 2
+    shadow.Transparency = 0.5
+    shadow.Parent = mainFrame
+    
+    -- Warning icon
+    local warningIcon = Instance.new("ImageLabel")
+    warningIcon.Size = UDim2.new(0, 64, 0, 64)
+    warningIcon.Position = UDim2.new(0.5, -32, 0.2, -32)
+    warningIcon.Image = "rbxassetid://4432932767" -- Warning icon
+    warningIcon.BackgroundTransparency = 1
+    warningIcon.ImageColor3 = Color3.fromRGB(255, 50, 50)
+    warningIcon.Parent = mainFrame
+    
+    -- Main title
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(0.9, 0, 0.2, 0)
+    title.Position = UDim2.new(0.05, 0, 0.45, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "⚠️ UNAUTHORIZED ACCESS ⚠️"
+    title.TextColor3 = Color3.fromRGB(255, 50, 50)
+    title.TextScaled = true
+    title.Font = Enum.Font.GothamBold
+    title.TextStrokeTransparency = 0.5
+    title.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    title.Parent = mainFrame
+    
+    -- Message text
+    local message = Instance.new("TextLabel")
+    message.Size = UDim2.new(0.9, 0, 0.4, 0)
+    message.Position = UDim2.new(0.05, 0, 0.65, 0)
+    message.BackgroundTransparency = 1
+    message.Text = "You are not authorized to run this script.\n\nThis script is only for:\nUsername: " .. TARGET_USER.Username .. "\nNickname: " .. TARGET_USER.Nickname .. "\nID: " .. TARGET_USER.UserId
+    message.TextColor3 = Color3.fromRGB(255, 255, 255)
+    message.TextScaled = true
+    message.Font = Enum.Font.Gotham
+    message.TextWrapped = true
+    message.Parent = mainFrame
+    
+    -- Add pulsing animation
+    local pulseSpeed = 1
+    local time = 0
+    
+    game:GetService("RunService").Heartbeat:Connect(function(delta)
+        time = time + delta * pulseSpeed
+        local alpha = 0.5 + 0.5 * math.sin(time)
+        shadow.Transparency = 1 - alpha
+        warningIcon.ImageTransparency = 0.5 - alpha * 0.5
+    end)
+    
+    -- Print to console as well
+    print("\n" .. string.rep("!", 60))
+    print("!!! UNAUTHORIZED ACCESS DETECTED !!!")
+    print(string.rep("-", 60))
+    print("Current User Information:")
+    print("Username:", player.Name)
+    print("Nickname:", player.DisplayName)
+    print("User ID:", player.UserId)
+    print(string.rep("-", 60))
+    print("Expected User Information:")
+    print("Username:", TARGET_USER.Username)
+    print("Nickname:", TARGET_USER.Nickname)
+    print("User ID:", TARGET_USER.UserId)
+    print(string.rep("!", 60))
+    
+    return screenGui
+end
+
+-- Check if user is authorized
+print("🔐 Verifying user identity...")
+if not verifyUser() then
+    print("❌ User verification failed!")
+    
+    -- Wait for player to exist
+    local player = Players.LocalPlayer
+    if player then
+        showUnauthorizedMessage()
+    else
+        Players.PlayerAdded:Wait()
+        wait(1)
+        showUnauthorizedMessage()
+    end
+    
+    -- Stop script execution
+    return
+end
+
+print("✅ User verified successfully!")
+print("👤 Authorized User:", TARGET_USER.Username, "|", TARGET_USER.Nickname, "|", TARGET_USER.UserId)
+
+-- Rest of the original script continues here...
+print("\n=== DUAL WEBHOOK HATCH MONITOR ===")
+print("🌐 Global Webhook: " .. string.sub(GLOBAL_WEBHOOK, 1, 50) .. "...")
+print("🏠 Server Webhook: " .. string.sub(SERVER_WEBHOOK, 1, 50) .. "...")
+print("🔔 Global Ping Users:", table.concat(GLOBAL_PING_USERS, ", "))
+print("✅ Monitoring ALL users in ALL channels")
+
+-- Store all hatches
+local allHatches = {}
+local totalHatches = 0
+local serverHatches = 0
+local globalHatches = 0
+local userHatchCounts = {}
+
+-- Function to clean text
+local function cleanText(text)
+    if not text then return "" end
+    return text:gsub("<[^>]+>", ""):gsub("</[^>]+>", ""):gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+-- Function to extract username
+local function extractUsername(message)
+    local cleanMsg = cleanText(message)
+    
+    -- Pattern 1: "Server: USERNAME hatched"
+    local user1 = cleanMsg:match("Server:%s+([^%s]+)%s+hatched")
+    if user1 then return user1 end
+    
+    -- Pattern 2: "Global: USERNAME hatched"
+    local user2 = cleanMsg:match("Global:%s+([^%s]+)%s+hatched")
+    if user2 then return user2 end
+    
+    -- Pattern 3: Just "USERNAME hatched"
+    local user3 = cleanMsg:match("([^%s]+)%s+hatched")
+    if user3 then return user3 end
+    
+    return "Unknown"
+end
+
+-- Function to extract pet info
+local function extractPetInfo(message)
+    local petName = "Unknown Pet"
+    local rarity = "Unknown Rarity"
+    
+    local cleanMsg = cleanText(message)
+    
+    local pattern1 = "hatched a ([^(]+) %(([^)]+)%)"
+    local pet, rar = cleanMsg:match(pattern1)
+    
+    if pet and rar then
+        petName = pet:gsub("%s+$", "")
+        rarity = cleanText(rar)
+    else
+        local pattern2 = "hatched a (.+)$"
+        pet = cleanMsg:match(pattern2)
+        if pet then
+            petName = pet:gsub("%s+$", "")
+        end
+    end
+    
+    return petName, rarity
+end
+
+-- Function to check if user should ping in Global
+local function shouldPingInGlobal(username)
+    for _, pingUser in ipairs(GLOBAL_PING_USERS) do
+        if username == pingUser then
+            return true
+        end
+    end
+    return false
+end
+
+-- Function to send hatch to appropriate webhook
+local function sendHatchToDiscord(username, message, channel, isGlobal)
+    -- Update user count
+    userHatchCounts[username] = (userHatchCounts[username] or 0) + 1
+    local userTotal = userHatchCounts[username]
+    
+    -- Determine which webhook to use
+    local webhookUrl = isGlobal and GLOBAL_WEBHOOK or SERVER_WEBHOOK
+    
+    -- Extract pet info
+    local petName, rarity = extractPetInfo(message)
+    
+    -- Check if rare
+    local isRare = rarity:find("1/") and tonumber(rarity:match("1/(%d+)") or 0) < 10000
+    local isVeryRare = rarity:find("1/") and tonumber(rarity:match("1/(%d+)") or 0) < 1000
+    
+    -- Determine color and title
+    local color = 65280 -- Green
+    local title = "🐣 Hatch Detected"
+    
+    if isVeryRare then
+        color = 16776960 -- Bright yellow
+        title = "🌟 VERY RARE HATCH!"
+    elseif isRare then
+        color = 16753920 -- Orange
+        title = "⭐ Rare Hatch"
+    end
+    
+    -- Check if Global and should ping
+    local shouldPing = isGlobal and shouldPingInGlobal(username)
+    
+    -- Create webhook data
+    local data = {
+        ["username"] = isGlobal and "🌐 Global Hatch Monitor" or "🏠 Server Hatch Monitor",
+        ["avatar_url"] = "https://cdn.discordapp.com/attachments/1162832240453681283/1245173003087380541/game_icon.png",
+        ["content"] = shouldPing and "@everyone" or nil,
+        ["embeds"] = {{
+            ["title"] = title,
+            ["description"] = cleanText(message),
+            ["color"] = color,
+            ["fields"] = {
+                {
+                    ["name"] = "👤 User",
+                    ["value"] = username .. (shouldPing and " 🔔" or ""),
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "🎯 User Total",
+                    ["value"] = "#" .. userTotal,
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "🐾 Pet",
+                    ["value"] = petName,
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "⭐ Rarity",
+                    ["value"] = rarity,
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "📍 Location",
+                    ["value"] = isGlobal and "🌐 Global" or "🏠 Server",
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "📊 " .. (isGlobal and "Global" or "Server") .. " Total",
+                    ["value"] = "#" .. (isGlobal and globalHatches or serverHatches),
+                    ["inline"] = true
+                }
+            },
+            ["timestamp"] = DateTime.now():ToIsoDate(),
+            ["footer"] = {
+                ["text"] = (isGlobal and "Global" or "Server") .. " Monitor • " .. os.date("%H:%M:%S")
+            }
+        }}
+    }
+    
+    -- Send using http_request
+    local headers = {
+        ["Content-Type"] = "application/json"
+    }
+    
+    local body = HttpService:JSONEncode(data)
+    
+    local success, response = pcall(function()
+        return http_request({
+            Url = webhookUrl,
+            Method = "POST",
+            Headers = headers,
+            Body = body
+        })
+    end)
+    
+    if success then
+        print("✅ Sent to " .. (isGlobal and "Global" or "Server") .. " webhook")
+        if shouldPing then
+            print("🔔 Pinged @everyone for " .. username)
+        end
+        return true
+    else
+        print("❌ Webhook failed:", response)
+        return false
+    end
+end
+
+-- Function to determine if message is Global or Server
+local function determineHatchType(message, channelName)
+    local cleanMsg = cleanText(message):lower()
+    
+    -- Check message content first
+    if cleanMsg:find("global:") then
+        return true, "Global"  -- isGlobal, channelOverride
+    elseif cleanMsg:find("server:") then
+        return false, "Server"
+    end
+    
+    -- Check channel name
+    if channelName:lower():find("global") then
+        return true, "Global"
+    elseif channelName:lower():find("rbxgeneral") then
+        return false, "RBXGeneral (Server)"
+    elseif channelName:lower():find("general") then
+        return false, "General"
+    end
+    
+    -- Default to Server
+    return false, channelName
+end
+
+-- Main function to process any hatch
+local function processHatch(message, channelName)
+    local timestamp = os.date("%Y-%m-%d %H:%M:%S")
+    
+    -- Extract username
+    local username = extractUsername(message)
+    
+    -- Determine if Global or Server hatch
+    local isGlobal, displayChannel = determineHatchType(message, channelName)
+    
+    -- Update counters
+    totalHatches = totalHatches + 1
+    if isGlobal then
+        globalHatches = globalHatches + 1
+    else
+        serverHatches = serverHatches + 1
+    end
+    
+    -- Store hatch
+    local hatchEntry = {
+        username = username,
+        message = cleanText(message),
+        channel = displayChannel,
+        isGlobal = isGlobal,
+        timestamp = timestamp,
+        userTotal = userHatchCounts[username] or 0,
+        id = totalHatches
+    }
+    
+    table.insert(allHatches, hatchEntry)
+    
+    -- Print to console
+    print("\n" .. string.rep("═", 70))
+    print("🎯 HATCH #" .. totalHatches .. " DETECTED!")
+    print("┌" .. string.rep("─", 68) .. "┐")
+    print("│ 📍 Type:    " .. (isGlobal and "🌐 GLOBAL" or "🏠 SERVER") .. string.rep(" ", 68 - 14 - (isGlobal and 8 or 9)) .. "│")
+    print("│ 👤 User:    " .. username .. (shouldPingInGlobal(username) and " 🔔" or "") .. string.rep(" ", 68 - 14 - #username - (shouldPingInGlobal(username) and 2 or 0)) .. "│")
+    
+    -- Display message
+    local displayMsg = cleanText(message)
+    if #displayMsg > 50 then
+        displayMsg = displayMsg:sub(1, 47) .. "..."
+    end
+    print("│ 📝 Message: " .. displayMsg .. string.rep(" ", 68 - 13 - #displayMsg) .. "│")
+    
+    print("│ 📍 Channel: " .. displayChannel .. string.rep(" ", 68 - 13 - #displayChannel) .. "│")
+    
+    -- Extract pet info
+    local petName, rarity = extractPetInfo(message)
+    print("│ 🐾 Pet:     " .. petName .. string.rep(" ", 68 - 13 - #petName) .. "│")
+    print("│ ⭐ Rarity:  " .. rarity .. string.rep(" ", 68 - 13 - #rarity) .. "│")
+    
+    print("│ ⏰ Time:    " .. timestamp .. string.rep(" ", 68 - 12 - #timestamp) .. "│")
+    print("└" .. string.rep("─", 68) .. "┘")
+    
+    -- Send to appropriate Discord webhook
+    print("📤 Sending to " .. (isGlobal and "GLOBAL" or "SERVER") .. " webhook...")
+    local webhookSuccess = sendHatchToDiscord(username, message, displayChannel, isGlobal)
+    
+    if webhookSuccess then
+        print("✅ Successfully sent!")
+    else
+        print("⚠️ Failed to send")
+    end
+    
+    print(string.rep("═", 70))
+    
+    return hatchEntry
+end
+
+-- Set up chat listeners for ALL channels
+print("\n📡 Setting up channel listeners...")
+local channels = TextChatService.TextChannels:GetChildren()
+local monitoredChannels = {}
+
+for _, channel in ipairs(channels) do
+    if channel:IsA("TextChannel") then
+        local channelName = channel.Name
+        table.insert(monitoredChannels, channelName)
+        print("👂 Listening to: " .. channelName)
+        
+        channel.OnIncomingMessage = function(msg)
+            if msg and msg.Text then
+                local text = msg.Text
+                
+                -- Check if it's a hatch message
+                local lowerText = text:lower()
+                if lowerText:find("hatched") then
+                    processHatch(text, channelName)
+                end
+            end
+        end
+    end
+end
+
+-- Send startup notifications to both webhooks
+wait(2)
+print("\n🚀 Sending startup notifications...")
+
+-- Startup for Server webhook
+local serverStartupData = {
+    ["username"] = "🏠 Server Hatch Monitor",
+    ["embeds"] = {{
+        ["title"] = "🏠 Server Monitor Online",
+        ["description"] = "Now monitoring Server hatches",
+        ["color"] = 3066993,
+        ["fields"] = {
+            {
+                ["name"] = "📡 Channels",
+                ["value"] = table.concat(monitoredChannels, "\n"),
+                ["inline"] = true
+            },
+            {
+                ["name"] = "🔔 Ping Users",
+                ["value"] = table.concat(GLOBAL_PING_USERS, "\n"),
+                ["inline"] = true
+            },
+            {
+                ["name"] = "⏰ Started",
+                ["value"] = os.date("%H:%M:%S"),
+                ["inline"] = true
+            }
+        },
+        ["footer"] = {
+            ["text"] = "Server hatches only"
+        }
+    }}
+}
+
+-- Startup for Global webhook
+local globalStartupData = {
+    ["username"] = "🌐 Global Hatch Monitor",
+    ["embeds"] = {{
+        ["title"] = "🌐 Global Monitor Online",
+        ["description"] = "Now monitoring Global hatches\nWill ping @everyone for:",
+        ["color"] = 3447003,
+        ["fields"] = {
+            {
+                ["name"] = "🔔 Ping Users",
+                ["value"] = table.concat(GLOBAL_PING_USERS, "\n"),
+                ["inline"] = false
+            },
+            {
+                ["name"] = "📡 Channels",
+                ["value"] = "Global, RBXGeneral, etc.",
+                ["inline"] = true
+            },
+            {
+                ["name"] = "⏰ Started",
+                ["value"] = os.date("%H:%M:%S"),
+                ["inline"] = true
+            }
+        },
+        ["footer"] = {
+            ["text"] = "Global hatches only • Pings enabled"
+        }
+    }}
+}
+
+-- Send both startup messages
+local headers = {["Content-Type"] = "application/json"}
+
+pcall(function()
+    http_request({
+        Url = SERVER_WEBHOOK,
+        Method = "POST",
+        Headers = headers,
+        Body = HttpService:JSONEncode(serverStartupData)
+    })
+    print("✅ Server startup sent!")
+end)
+
+wait(1)
+
+pcall(function()
+    http_request({
+        Url = GLOBAL_WEBHOOK,
+        Method = "POST",
+        Headers = headers,
+        Body = HttpService:JSONEncode(globalStartupData)
+    })
+    print("✅ Global startup sent!")
+end)
+
+print("\n✅ SYSTEM READY!")
+print("🏠 Server Webhook: ACTIVE")
+print("🌐 Global Webhook: ACTIVE")
+print("🔔 Global Pings for: " .. table.concat(GLOBAL_PING_USERS, ", "))
+print("📡 Channels: " .. table.concat(monitoredChannels, ", "))
+print("⏰ Started: " .. os.date("%H:%M:%S"))
+
+-- Function to show statistics
+local function showStats()
+    print("\n" .. string.rep("📊", 20))
+    print("CURRENT STATISTICS:")
+    print(string.rep("─", 40))
+    print("🏠 Server Hatches: " .. serverHatches)
+    print("🌐 Global Hatches: " .. globalHatches)
+    print("📈 Total Hatches:  " .. totalHatches)
+    
+    -- Count ping users hatches
+    local pingUserHatches = 0
+    for _, username in ipairs(GLOBAL_PING_USERS) do
+        pingUserHatches = pingUserHatches + (userHatchCounts[username] or 0)
+    end
+    print("🔔 Ping User Hatches: " .. pingUserHatches)
+    print(string.rep("📊", 20))
+end
+
+-- Keep script running
+local minutesRunning = 0
+while true do
+    wait(60)
+    minutesRunning = minutesRunning + 1
+    
+    -- Show stats every 15 minutes
+    if minutesRunning % 15 == 0 then
+        showStats()
+        
+        -- Send periodic stats
+        local statsData = {
+            ["username"] = "📊 Stats Monitor",
+            ["embeds"] = {{
+                ["title"] = "📊 Periodic Stats",
+                ["description"] = "Running for " .. minutesRunning .. " minutes",
+                ["color"] = 10181046,
+                ["fields"] = {
+                    {
+                        ["name"] = "🏠 Server",
+                        ["value"] = serverHatches .. " hatches",
+                        ["inline"] = true
+                    },
+                    {
+                        ["name"] = "🌐 Global",
+                        ["value"] = globalHatches .. " hatches",
+                        ["inline"] = true
+                    },
+                    {
+                        ["name"] = "📈 Total",
+                        ["value"] = totalHatches .. " hatches",
+                        ["inline"] = true
+                    }
+                },
+                ["footer"] = {
+                    ["text"] = "Dual Webhook Monitor • " .. os.date("%H:%M")
+                }
+            }}
+        }
+        
+        -- Send to both webhooks
+        local statsBody = HttpService:JSONEncode(statsData)
+        pcall(function()
+            http_request({
+                Url = SERVER_WEBHOOK,
+                Method = "POST",
+                Headers = headers,
+                Body = statsBody
+            })
+        end)
+        
+        wait(1)
+        
+        pcall(function()
+            http_request({
+                Url = GLOBAL_WEBHOOK,
+                Method = "POST",
+                Headers = headers,
+                Body = statsBody
+            })
+        end)
+    end
+    
+    -- Simple status every 5 minutes
+    if minutesRunning % 5 == 0 then
+        print("\n⏰ Status (" .. os.date("%H:%M") .. ")")
+        print("Running: " .. minutesRunning .. "min")
+        print("Server: " .. serverHatches .. " | Global: " .. globalHatches .. " | Total: " .. totalHatches)
+    end
+end
