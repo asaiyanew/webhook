@@ -18,7 +18,7 @@ local GLOBAL_PING_USERS = {
 -- Target user
 local TARGET_USER = {
     Username = "Milocji2a",
-    Nickname = "WORST_3",
+    Nickname = "Asaiya3",
     UserId = 5357478860
 }
 
